@@ -23,6 +23,20 @@ export namespace gitdiff {
 
 export namespace main {
 	
+	export class ChangedFileInfo {
+	    path: string;
+	    status: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ChangedFileInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.status = source["status"];
+	    }
+	}
 	export class SetRepoResult {
 	    branch: string;
 	    ok: boolean;

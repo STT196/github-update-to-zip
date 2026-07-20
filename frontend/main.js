@@ -5,6 +5,18 @@ let currentBranch = "";
 let changedFiles = []; // { path, status }
 let expandedFile = null; // currently viewed diff
 
+// ── Browse buttons ──────────────────────────────────────────────────────
+
+document.getElementById("browseRepoBtn").onclick = async () => {
+  const folder = await window.go.main.App.PickFolder();
+  if (folder) document.getElementById("repoPath").value = folder;
+};
+
+document.getElementById("browseOutputBtn").onclick = async () => {
+  const folder = await window.go.main.App.PickFolder();
+  if (folder) document.getElementById("outputDir").value = folder;
+};
+
 // ── Set repo ────────────────────────────────────────────────────────────
 
 document.getElementById("setRepoBtn").onclick = async () => {

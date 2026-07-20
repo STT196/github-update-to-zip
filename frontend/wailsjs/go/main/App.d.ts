@@ -3,12 +3,18 @@
 import {main} from '../models';
 import {gitdiff} from '../models';
 
-export function GenerateZip(arg1:string,arg2:string,arg3:string,arg4:string):Promise<main.ZipResult>;
+export function GenerateZip(arg1:string,arg2:string,arg3:string,arg4:string,arg5:Array<string>):Promise<main.ZipResult>;
+
+export function GetChangedFiles(arg1:string,arg2:string,arg3:string):Promise<Array<main.ChangedFileInfo>>;
+
+export function GetFileDiff(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
 export function GetRecentCommits(arg1:number):Promise<Array<gitdiff.CommitInfo>>;
 
 export function GitAvailable():Promise<boolean>;
 
 export function OpenFolder(arg1:string):Promise<void>;
+
+export function PickFolder():Promise<string>;
 
 export function SetRepo(arg1:string):Promise<main.SetRepoResult>;

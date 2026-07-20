@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
+	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
+
 	"github.com/thisara/github-update-tracker/internal/gitdiff"
 	"github.com/thisara/github-update-tracker/internal/notify"
 	"github.com/thisara/github-update-tracker/internal/zipper"
@@ -162,4 +164,10 @@ func (a *App) GitAvailable() bool {
 
 func (a *App) OpenFolder(path string) error {
 	return openInExplorer(path)
+}
+
+func (a *App) PickFolder() (string, error) {
+	return wailsRuntime.OpenDirectoryDialog(a.ctx, wailsRuntime.OpenDialogOptions{
+		Title: "Select folder",
+	})
 }
