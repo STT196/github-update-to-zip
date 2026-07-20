@@ -1,14 +1,25 @@
-// Git Update Zipper — frontend logic (two-pane layout)
+// Git Update Zipper — frontend logic (GitHub Desktop style sidebar)
 
 let repoLoaded = false;
 let currentBranch = "";
 let changedFiles = []; // { path, status }
 let selectedIdx = null; // currently viewed file, index into changedFiles
+let recentPaths = []; // cached recent paths
 
 const el = (id) => document.getElementById(id);
 const getMode = () => el("modeSelect").value;
 
-// ── Add repo (GitHub Desktop style) ─────────────────────────────────────
+// ── Icons (inline SVG strings) ────────────────────────────────────────
+
+const FolderIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.2373 3.7002C10.4169 3.7002 11.5297 4.24779 12.249 5.18262L12.4424 5.43359H18C20.0987 5.43359 21.7998 7.13472 21.7998 9.2334V16.5C21.7998 18.5987 20.0987 20.2998 18 20.2998H6C3.90132 20.2998 2.2002 18.5987 2.2002 16.5V7.5C2.2002 5.40132 3.90132 3.7002 6 3.7002H9.2373ZM6 5.5C4.89543 5.5 4 6.39543 4 7.5V16.5C4 17.6046 4.89543 18.5 6 18.5H18C19.0357 18.5 19.887 17.7128 19.9893 16.7041L20 16.5V9.2334C20 8.19775 19.2128 7.34641 18.2041 7.24414L18 7.2334H12.0479L11.9326 7.22656C11.666 7.19561 11.4205 7.05812 11.2549 6.84277L10.8223 6.28027C10.4437 5.78834 9.85808 5.5 9.2373 5.5H6ZM16 9.59961C16.4971 9.59961 16.9004 10.0029 16.9004 10.5C16.9004 10.9971 16.4971 11.4004 16 11.4004H8C7.50294 11.4004 7.09961 10.9971 7.09961 10.5C7.09961 10.0029 7.50294 9.59961 8 9.59961H16Z" fill="currentColor"/></svg>`;
+
+const LockIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7 5C7 3.34315 8.34315 2 10 2H14C15.6569 2 17 3.34315 17 5V6H18C19.6569 6 21 7.34315 21 9V19C21 20.6569 19.6569 22 18 22H6C4.34315 22 3 20.6569 3 19V9C3 7.34315 4.34315 6 6 6H7V5ZM10 4C9.44772 4 9 4.44772 9 5V6H15V5C15 4.44772 14.5523 4 14 4H10ZM6 8C5.44772 8 5 8.44772 5 9V19C5 19.5523 5.44772 20 6 20H18C18.5523 20 19 19.5523 19 19V9C19 8.44772 18.5523 8 18 8H6Z" fill="currentColor"/></svg>`;
+
+const GlobeIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM15.5 16.5C15.5 16.5 14.5 18 12 18C9.5 18 8.5 16.5 8.5 16.5C8.5 16.5 7 14.5 7 12C7 9.5 8.5 7.5 8.5 7.5C8.5 7.5 9.5 6 12 6C14.5 6 15.5 7.5 15.5 7.5C15.5 7.5 17 9.5 17 12C17 14.5 15.5 16.5 15.5 16.5ZM12 8C10.3431 8 9 9.79086 9 12C9 14.2091 10.3431 16 12 16C13.6569 16 15 14.2091 15 12C15 9.79086 13.6569 8 12 8Z" fill="currentColor"/></svg>`;
+
+const DownloadIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.0002 15.5C12.5525 15.5 13.0002 15.0523 13.0002 14.5V7.41421L14.2932 8.70711C14.6837 9.09763 15.3169 9.09763 15.7074 8.70711C16.0979 8.31658 16.0979 7.68342 15.7074 7.29289L12.7074 4.29289C12.3169 3.90237 11.6837 3.90237 11.2932 4.29289L8.29321 7.29289C7.90269 7.68342 7.90269 8.31658 8.29321 8.70711C8.68373 9.09763 9.3169 9.09763 9.70742 8.70711L11.0002 7.41421V14.5C11.0002 15.0523 11.4479 15.5 12.0002 15.5Z" fill="currentColor"/><path d="M4 16C4 15.4477 4.44772 15 5 15H7C7.55228 15 8 15.4477 8 16C8 16.5523 7.55228 17 7 17H5V19H19V17H17C16.4477 17 16 16.5523 16 16C16 15.4477 16.4477 15 17 15H19C19.5523 15 20 15.4477 20 16V20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20V16Z" fill="currentColor"/></svg>`;
+
+// ── Add repo ────────────────────────────────────────────────────────────
 
 el("addRepoBtn").onclick = async () => {
   const folder = await window.go.main.App.PickFolder();
@@ -32,11 +43,8 @@ async function loadRepo(path) {
     pill.textContent = `⎇ ${currentBranch}`;
     pill.style.display = "inline-block";
 
-    // Show current repo at top
-    const cur = el("currentRepo");
-    cur.style.display = "flex";
+    // Update current repo header
     el("currentRepoName").textContent = path.split(/[\\/]/).pop();
-    el("currentRepoPath").textContent = path;
 
     logLine(`Repo loaded: ${path} (${currentBranch})`);
     loadCommits();
@@ -46,12 +54,13 @@ async function loadRepo(path) {
   }
 }
 
-// ── Recent paths ────────────────────────────────────────────────────────
+// ── Recent paths (GitHub Desktop grouped style) ───────────────────────
 
 async function loadRecentPaths() {
   const paths = await window.go.main.App.GetRecentPaths();
   const list = el("recentList");
   const empty = el("recentEmpty");
+  recentPaths = paths || [];
 
   if (!paths || paths.length === 0) {
     list.innerHTML = "";
@@ -62,35 +71,88 @@ async function loadRecentPaths() {
   empty.style.display = "none";
   list.innerHTML = "";
 
+  // Group by parent directory (simulating org/user grouping)
+  const groups = {};
   paths.forEach((p) => {
-    const item = document.createElement("div");
-    item.className = "recent-item" + (repoLoaded && p.path === el("currentRepoPath").textContent ? " active" : "");
-    const name = p.path.split(/[\\/]/).pop() || p.path;
-
-    item.innerHTML = `
-      <span class="recent-icon">⌗</span>
-      <div class="recent-info">
-        <div class="recent-name">${esc(name)}</div>
-        <div class="recent-path-sub">${esc(p.path)}</div>
-      </div>
-      <button class="recent-remove" data-path="${esc(p.path)}" title="Remove">×</button>`;
-
-    item.onclick = async (e) => {
-      if (e.target.classList.contains("recent-remove")) return;
-      loadRepo(p.path);
-    };
-    list.appendChild(item);
+    const parts = p.path.split(/[\\/]/);
+    const name = parts.pop() || p.path;
+    const parent = parts.length > 0 ? parts[parts.length - 1] : "Other";
+    
+    if (!groups[parent]) groups[parent] = [];
+    groups[parent].push({ ...p, name, parent });
   });
 
-  // Wire remove buttons
-  list.querySelectorAll(".recent-remove").forEach(btn => {
-    btn.onclick = async (e) => {
-      e.stopPropagation();
-      await window.go.main.App.RemoveRecentPath(btn.dataset.path);
-      loadRecentPaths();
-    };
+  // Render groups
+  Object.keys(groups).forEach((groupName) => {
+    const group = document.createElement("div");
+    group.className = "repo-group";
+
+    // Group header
+    const header = document.createElement("div");
+    header.className = "repo-group-header";
+    header.innerHTML = `${FolderIcon}<span>${esc(groupName)}</span>`;
+    group.appendChild(header);
+
+    // Repo items
+    groups[groupName].forEach((p) => {
+      const item = document.createElement("div");
+      const isActive = repoLoaded && p.path === (el("currentRepoPath")?.textContent || "");
+      item.className = "repo-item" + (isActive ? " active" : "");
+      
+      // Determine icon based on path or random for demo
+      const isPrivate = Math.random() > 0.5; // Replace with actual logic
+      const iconSvg = isPrivate ? LockIcon : GlobeIcon;
+      
+      // Status indicator
+      let statusHtml = "";
+      const hasUnpushed = Math.random() > 0.7; // Replace with actual logic
+      const needsPull = Math.random() > 0.8; // Replace with actual logic
+      
+      if (needsPull) {
+        statusHtml = `<span class="repo-status-icon repo-status-pull">${DownloadIcon}</span>`;
+      } else if (hasUnpushed) {
+        statusHtml = `<span class="repo-status-dot"></span>`;
+      }
+
+      item.innerHTML = `
+        <span class="repo-item-icon">${iconSvg}</span>
+        <div class="repo-item-info">
+          <div class="repo-item-name">${esc(p.name)}</div>
+          <div class="repo-item-path">${esc(p.path)}</div>
+        </div>
+        ${statusHtml}`;
+
+      item.onclick = async () => {
+        loadRepo(p.path);
+      };
+
+      group.appendChild(item);
+    });
+
+    list.appendChild(group);
   });
 }
+
+// ── Filter repos ────────────────────────────────────────────────────────
+
+el("repoFilter").oninput = () => {
+  const filter = el("repoFilter").value.toLowerCase();
+  const items = document.querySelectorAll(".repo-item");
+  const groups = document.querySelectorAll(".repo-group");
+  
+  items.forEach((item) => {
+    const name = item.querySelector(".repo-item-name").textContent.toLowerCase();
+    const path = item.querySelector(".repo-item-path").textContent.toLowerCase();
+    const match = name.includes(filter) || path.includes(filter);
+    item.style.display = match ? "flex" : "none";
+  });
+  
+  // Hide empty groups
+  groups.forEach((group) => {
+    const visible = group.querySelectorAll('.repo-item[style*="display: flex"]').length;
+    group.style.display = visible > 0 ? "block" : "none";
+  });
+};
 
 // ── Mode switching ──────────────────────────────────────────────────────
 
@@ -131,7 +193,7 @@ async function loadCommits() {
 
 el("scanBtn").onclick = async () => {
   if (!repoLoaded) {
-    logLine("Load a repo first — click one from the recent list or use + to add.");
+    logLine("Load a repo first — click one from the recent list or use Add to add.");
     return;
   }
 
@@ -151,7 +213,7 @@ el("scanBtn").onclick = async () => {
   } catch (err) {
     logLine(`Error: ${err}`);
     el("fileArea").style.display = "none";
-    el("sidebarEmpty").style.display = "block";
+    el("changesEmpty").style.display = "block";
   }
 };
 
@@ -161,7 +223,7 @@ function renderFileList() {
   const area = el("fileArea");
   const list = el("fileList");
   const count = el("fileCount");
-  const empty = el("sidebarEmpty");
+  const empty = el("changesEmpty");
 
   if (changedFiles.length === 0) {
     area.style.display = "none";
@@ -355,9 +417,29 @@ function esc(s) {
   return d.innerHTML;
 }
 
+// ── Theme toggle ─────────────────────────────────────────────────────────
+
+const MoonIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21.5 14.0784C20.3003 14.7189 18.9301 15.0821 17.4751 15.0821C12.7491 15.0821 8.91792 11.2509 8.91792 6.52485C8.91792 5.06986 9.28105 3.69968 9.92163 2.5C5.66765 3.49698 2.5 7.31513 2.5 11.8731C2.5 17.1899 6.8101 21.5 12.1269 21.5C16.6849 21.5 20.503 18.3324 21.5 14.0784Z" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>`;
+const SunIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V4M12 20V21M4 12H3M21 12H20M6.31412 6.31412L5.5 5.5M18.5 18.5L17.6859 17.6859M6.31412 17.6859L5.5 18.5M18.5 5.5L17.6859 6.31412M16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12Z" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>`;
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  el("themeIcon").innerHTML = theme === "dark" ? SunIcon : MoonIcon;
+  localStorage.setItem("theme", theme);
+}
+
+el("themeToggle").onclick = () => {
+  const current = document.documentElement.getAttribute("data-theme");
+  applyTheme(current === "dark" ? "light" : "dark");
+};
+
 // ── Init ────────────────────────────────────────────────────────────────
 
 (async () => {
+  // Load saved theme or default to light
+  const saved = localStorage.getItem("theme") || "light";
+  applyTheme(saved);
+
   const ok = await window.go.main.App.GitAvailable();
   const gitPill = el("gitStatus");
   if (ok) {
@@ -367,7 +449,6 @@ function esc(s) {
     gitPill.textContent = "git not found";
     gitPill.className = "pill pill-err";
     logLine("git not found on PATH — app won't work without git.");
-    el("setRepoBtn").disabled = true;
     el("scanBtn").disabled = true;
   }
   loadRecentPaths();

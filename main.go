@@ -17,10 +17,10 @@ func main() {
 
 	err := wails.Run(&options.App{
 		Title:     "Git Update Zipper",
-		Width:     780,
-		Height:    620,
-		MinWidth:  600,
-		MinHeight: 480,
+		Width:     960,
+		Height:    640,
+		MinWidth:  800,
+		MinHeight: 500,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

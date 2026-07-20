@@ -133,7 +133,9 @@ func (a *App) GenerateZip(mode string, fromSHA string, toSHA string, outputDir s
 	zipName := fmt.Sprintf("update_%s.zip", ts)
 	zipPath := filepath.Join(outputDir, zipName)
 
-	if err := zipper.BuildZip(toZip, zipPath); err != nil {
+	// Use the repo folder name as the root folder inside the zip
+	rootName := filepath.Base(a.repoPath)
+	if err := zipper.BuildZip(toZip, zipPath, rootName); err != nil {
 		return ZipResult{OK: false, Error: err.Error()}
 	}
 

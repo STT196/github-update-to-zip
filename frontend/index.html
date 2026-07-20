@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <title>Git Update Zipper</title>
@@ -15,6 +15,11 @@
         <span id="appTitle">Git Update Zipper</span>
       </div>
       <div id="topbarRight">
+        <button id="themeToggle" class="theme-btn" title="Toggle dark/light mode">
+          <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 3V4M12 20V21M4 12H3M21 12H20M6.31412 6.31412L5.5 5.5M18.5 18.5L17.6859 17.6859M6.31412 17.6859L5.5 18.5M18.5 5.5L17.6859 6.31412M16 12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          </svg>
+        </button>
         <span id="branchPill" class="pill" style="display:none"></span>
         <span id="gitStatus" class="pill pill-muted">checking git…</span>
       </div>
@@ -22,29 +27,31 @@
 
     <div id="body">
 
-      <!-- Sidebar -->
-      <aside id="sidebar">
-
-        <div class="side-section">
-          <div id="currentRepo" style="display:none">
-            <span id="currentRepoIcon">⌗</span>
-            <div>
-              <div id="currentRepoName" class="repo-name"></div>
-              <div id="currentRepoPath" class="repo-path-sub"></div>
-            </div>
-          </div>
-
-          <div id="recentSection">
-            <div class="recent-header">
-              <label class="side-label">Recent repositories</label>
-              <button id="addRepoBtn" class="icon-btn" title="Add local repository">+</button>
-            </div>
-            <div id="recentList" class="recent-list"></div>
-            <div id="recentEmpty" class="recent-empty">No recent repositories. Click + to add one.</div>
+      <!-- Column 1: Repositories -->
+      <aside id="repoPanel">
+        <div id="currentRepoHeader">
+          <div class="repo-header-row">
+            <span id="currentRepoName" class="repo-header-name">Select a repo</span>
           </div>
         </div>
+        <div id="searchBar">
+          <div class="search-input-wrap">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M11.5 3C16.1944 3 20 6.80558 20 11.5C20 13.523 19.2933 15.381 18.1132 16.8404L21.1364 19.8636C21.4879 20.2151 21.4879 20.7849 21.1364 21.1364C20.7849 21.4879 20.2151 21.4879 19.8636 21.1364L16.8404 18.1132C15.381 19.2933 13.523 20 11.5 20C6.80558 20 3 16.1944 3 11.5C3 6.80558 6.80558 3 11.5 3ZM11.5 18.2C15.2003 18.2 18.2 15.2003 18.2 11.5C18.2 7.79969 15.2003 4.8 11.5 4.8C7.79969 4.8 4.8 7.79969 4.8 11.5C4.8 15.2003 7.79969 18.2 11.5 18.2Z" fill="currentColor"/>
+            </svg>
+            <input id="repoFilter" type="text" placeholder="Filter" />
+          </div>
+          <button id="addRepoBtn" class="add-btn" title="Add local repository">+</button>
+        </div>
+        <div id="recentSection">
+          <div id="recentList" class="recent-list"></div>
+          <div id="recentEmpty" class="recent-empty">No recent repos.<br>Click + to add one.</div>
+        </div>
+      </aside>
 
-        <div class="side-section">
+      <!-- Column 2: Changes -->
+      <aside id="changesPanel">
+        <div class="changes-section">
           <label class="side-label">Include</label>
           <select id="modeSelect" class="mode-select">
             <option value="uncommitted" selected>Uncommitted changes</option>
@@ -52,7 +59,6 @@
             <option value="last">Last commit only</option>
             <option value="range">Select commit range…</option>
           </select>
-
           <div id="rangePicker" style="display:none">
             <div class="range-row">
               <select id="fromCommit"></select>
@@ -61,11 +67,10 @@
               <button id="loadCommitsBtn" class="icon-btn" title="Refresh commits">↻</button>
             </div>
           </div>
-
           <button id="scanBtn" class="btn-block btn-primary">Scan for changes</button>
         </div>
 
-        <div id="fileArea" class="side-section side-files" style="display:none">
+        <div id="fileArea" class="changes-section changes-files" style="display:none">
           <div class="file-header">
             <span id="fileCount"></span>
             <div class="file-actions">
@@ -76,12 +81,11 @@
           <div id="fileList"></div>
         </div>
 
-        <div id="sidebarEmpty" class="side-empty">
+        <div id="changesEmpty" class="side-empty">
           <p>No changes scanned yet.</p>
-          <p class="side-empty-sub">Load a repo and scan to see what's changed.</p>
+          <p class="side-empty-sub">Load a repo and scan to see changes.</p>
         </div>
 
-        <!-- Bottom action box, mirrors a commit box -->
         <div id="zipBox">
           <div class="field">
             <label class="side-label">Output folder</label>
@@ -94,7 +98,7 @@
         </div>
       </aside>
 
-      <!-- Main diff pane -->
+      <!-- Column 3: Diff viewer -->
       <main id="mainPane">
         <div id="diffHeader" style="display:none">
           <span id="diffFileStatus" class="file-status"></span>
@@ -104,14 +108,13 @@
           <div id="mainEmpty" class="main-empty">
             <div class="main-empty-icon">⌗</div>
             <p>Select a file to view its diff</p>
-            <p class="main-empty-sub">Scan a repo on the left to get started</p>
+            <p class="main-empty-sub">Scan a repo to get started</p>
           </div>
         </div>
         <div id="resultBanner" style="display:none"></div>
       </main>
     </div>
 
-    <!-- Footer log -->
     <footer id="logStrip"></footer>
   </div>
 

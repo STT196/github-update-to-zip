@@ -19,8 +19,9 @@ type ChangedFile struct {
 }
 
 // BuildZip writes a zip at outZipPath containing every non-removed file
-// in files, preserving each file's repo-relative path inside the archive.
-func BuildZip(files []ChangedFile, outZipPath string) error {
+// in files. If rootFolder is non-empty, all paths are prefixed with
+// rootFolder/ so the zip extracts to a single parent directory.
+func BuildZip(files []ChangedFile, outZipPath string, rootFolder string) error {
 	zf, err := os.Create(outZipPath)
 	if err != nil {
 		return err
@@ -35,7 +36,12 @@ func BuildZip(files []ChangedFile, outZipPath string) error {
 			continue
 		}
 
-		w, err := zw.Create(f.Path) // preserves directory structure
+		zipPath := f.Path
+		if rootFolder != "" {
+			zipPath = rootFolder + "/" + zipPath
+		}
+
+		w, err := zw.Create(zipPath) // preserves directory structure
 		if err != nil {
 			return err
 		}
