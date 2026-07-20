@@ -167,6 +167,21 @@ func (a *App) GitAvailable() bool {
 	return gitdiff.GitAvailable()
 }
 
+func (a *App) SaveBaseline() error {
+	if a.repo == nil {
+		return fmt.Errorf("no repo selected")
+	}
+	return a.repo.SaveBaseline()
+}
+
+func (a *App) HasBaseline() bool {
+	if a.repo == nil {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(a.repoPath, ".gitzip-baseline.json"))
+	return err == nil
+}
+
 func (a *App) OpenFolder(path string) error {
 	return openInExplorer(path)
 }

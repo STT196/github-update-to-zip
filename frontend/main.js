@@ -157,8 +157,13 @@ el("repoFilter").oninput = () => {
 // ── Mode switching ──────────────────────────────────────────────────────
 
 el("modeSelect").onchange = () => {
-  el("rangePicker").style.display = getMode() === "range" ? "block" : "none";
-  if (getMode() === "range") loadCommits();
+  const isBaseline = getMode() === "baseline";
+  const isRange = getMode() === "range";
+  el("rangePicker").style.display = isRange ? "block" : "none";
+  el("baselineBtn").style.display = isBaseline ? "block" : "none";
+  el("baselineStatus").style.display = isBaseline ? "block" : "none";
+  if (isRange) loadCommits();
+  if (isBaseline) updateBaselineStatus();
 };
 
 // ── Commit picker ───────────────────────────────────────────────────────
@@ -216,6 +221,30 @@ el("scanBtn").onclick = async () => {
     el("changesEmpty").style.display = "block";
   }
 };
+
+// ── Baseline (no-git mode) ──────────────────────────────────────────────
+
+el("baselineBtn").onclick = async () => {
+  try {
+    await window.go.main.App.SaveBaseline();
+    updateBaselineStatus();
+    logLine("Baseline saved — make changes, then scan.");
+  } catch (err) {
+    logLine(`Error saving baseline: ${err}`);
+  }
+};
+
+async function updateBaselineStatus() {
+  const status = el("baselineStatus");
+  try {
+    const has = await window.go.main.App.HasBaseline();
+    status.textContent = has ? "✓ Baseline set — ready to scan" : "No baseline yet — click Set baseline first";
+    status.className = has ? "hint ok" : "hint err";
+  } catch (_) {
+    status.textContent = "Error checking baseline";
+    status.className = "hint err";
+  }
+}
 
 // ── Render file list (sidebar) ──────────────────────────────────────────
 

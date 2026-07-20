@@ -1,0 +1,10 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Archive box / folder base -->
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M4.5 3.5C3.67157 3.5 3 4.17157 3 5V18C3 18.8284 3.67157 19.5 4.5 19.5H19.5C20.3284 19.5 21 18.8284 21 18V7C21 6.17157 20.3284 5.5 19.5 5.5H12L10.5 4C10.1 3.6 9.5 3.5 9 3.5H4.5ZM4.5 5.5H9C9.2 5.5 9.4 5.6 9.6 5.8L10.5 7H4.5V5.5ZM4.5 8.5V18H19.5V8.5H4.5Z" fill="currentColor"/>
+  <!-- Zipper teeth (vertical dashed line) -->
+  <path d="M11.5 10H12.5V10.8H11.5V10ZM11.5 12H12.5V12.8H11.5V12ZM11.5 14H12.5V14.8H11.5V14Z" fill="currentColor"/>
+  <!-- Zipper slider/pull tab -->
+  <path d="M11 8.5H13C13.2761 8.5 13.5 8.72386 13.5 9V10C13.5 10.2761 13.2761 10.5 13 10.5H11C10.7239 10.5 10.5 10.2761 10.5 10V9C10.5 8.72386 10.7239 8.5 11 8.5Z" fill="currentColor"/>
+  <!-- Update arrow (bottom right) -->
+  <path d="M15.5 15.5L17.5 13.5L15.5 11.5V13H14V14H15.5V15.5Z" fill="currentColor"/>
+</svg>

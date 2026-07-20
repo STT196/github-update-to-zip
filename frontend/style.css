@@ -105,7 +105,11 @@ body { font-family: var(--font-ui); color: var(--text); background: var(--main-b
 }
 
 #topbarLeft { display: flex; align-items: center; gap: 8px; }
-#appIcon { color: var(--accent); font-size: 16px; }
+#appIcon { 
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+}
 #appTitle { font-size: 13px; font-weight: 600; letter-spacing: 0.2px; }
 
 #topbarRight { display: flex; align-items: center; gap: 8px; -webkit-app-region: no-drag; }

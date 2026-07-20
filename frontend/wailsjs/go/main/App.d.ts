@@ -15,11 +15,15 @@ export function GetRecentPaths():Promise<Array<main.RecentEntry>>;
 
 export function GitAvailable():Promise<boolean>;
 
+export function HasBaseline():Promise<boolean>;
+
 export function OpenFolder(arg1:string):Promise<void>;
 
 export function PickFolder():Promise<string>;
 
 export function RemoveRecentPath(arg1:string):Promise<void>;
+
+export function SaveBaseline():Promise<void>;
 
 export function SaveRecentPath(arg1:string):Promise<void>;
 

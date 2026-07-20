@@ -26,6 +26,10 @@ export function GitAvailable() {
   return window['go']['main']['App']['GitAvailable']();
 }
 
+export function HasBaseline() {
+  return window['go']['main']['App']['HasBaseline']();
+}
+
 export function OpenFolder(arg1) {
   return window['go']['main']['App']['OpenFolder'](arg1);
 }
@@ -36,6 +40,10 @@ export function PickFolder() {
 
 export function RemoveRecentPath(arg1) {
   return window['go']['main']['App']['RemoveRecentPath'](arg1);
+}
+
+export function SaveBaseline() {
+  return window['go']['main']['App']['SaveBaseline']();
 }
 
 export function SaveRecentPath(arg1) {

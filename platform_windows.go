@@ -1,8 +1,13 @@
 package main
 
-import "os/exec"
+import (
+	"os/exec"
+	"syscall"
+)
 
 // openInExplorer opens the given folder in Windows Explorer.
 func openInExplorer(path string) error {
-	return exec.Command("explorer", path).Start()
+	cmd := exec.Command("explorer", path)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	return cmd.Start()
 }
