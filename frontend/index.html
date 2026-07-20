@@ -7,74 +7,112 @@
 </head>
 <body>
   <div id="app">
-    <h1>Git Update Zipper</h1>
-    <p class="subtitle">Select changed files, review diffs, zip for upload</p>
 
-    <!-- Repo path -->
-    <div class="field">
-      <label>Local repo path</label>
-      <div class="row">
-        <input id="repoPath" type="text" placeholder="C:\Users\you\my-project" />
-        <button id="browseRepoBtn" title="Browse for repo folder">…</button>
-        <button id="setRepoBtn">Load</button>
+    <!-- Top bar -->
+    <header id="topbar">
+      <div id="topbarLeft">
+        <span id="appIcon">◈</span>
+        <span id="appTitle">Git Update Zipper</span>
       </div>
-      <div id="repoStatus" class="hint"></div>
-    </div>
-
-    <!-- Output folder -->
-    <div class="field">
-      <label>Output folder</label>
-      <div class="row">
-        <input id="outputDir" type="text" placeholder="C:\Users\you\updates" />
-        <button id="browseOutputBtn" title="Browse for output folder">…</button>
+      <div id="topbarRight">
+        <span id="branchPill" class="pill" style="display:none"></span>
+        <span id="gitStatus" class="pill pill-muted">checking git…</span>
       </div>
-    </div>
+    </header>
 
-    <!-- Mode -->
-    <div class="field">
-      <label>What to include</label>
-      <div id="modeGroup" class="mode-group">
-        <label class="mode-option"><input type="radio" name="mode" value="uncommitted" checked /> Uncommitted changes</label>
-        <label class="mode-option"><input type="radio" name="mode" value="unpushed" /> Unpushed commits</label>
-        <label class="mode-option"><input type="radio" name="mode" value="last" /> Last commit only</label>
-        <label class="mode-option"><input type="radio" name="mode" value="range" /> Select commits</label>
-      </div>
-    </div>
+    <div id="body">
 
-    <!-- Commit range picker -->
-    <div id="rangePicker" style="display:none">
-      <div class="field">
-        <div class="range-row">
-          <span>From:</span>
-          <select id="fromCommit"></select>
-          <span>→ To:</span>
-          <select id="toCommit"></select>
-          <button id="loadCommitsBtn">Refresh</button>
+      <!-- Sidebar -->
+      <aside id="sidebar">
+
+        <div class="side-section">
+          <div id="currentRepo" style="display:none">
+            <span id="currentRepoIcon">⌗</span>
+            <div>
+              <div id="currentRepoName" class="repo-name"></div>
+              <div id="currentRepoPath" class="repo-path-sub"></div>
+            </div>
+          </div>
+
+          <div id="recentSection">
+            <div class="recent-header">
+              <label class="side-label">Recent repositories</label>
+              <button id="addRepoBtn" class="icon-btn" title="Add local repository">+</button>
+            </div>
+            <div id="recentList" class="recent-list"></div>
+            <div id="recentEmpty" class="recent-empty">No recent repositories. Click + to add one.</div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Scan button -->
-    <button id="scanBtn" class="primary big">Scan changes</button>
+        <div class="side-section">
+          <label class="side-label">Include</label>
+          <select id="modeSelect" class="mode-select">
+            <option value="uncommitted" selected>Uncommitted changes</option>
+            <option value="unpushed">Unpushed commits</option>
+            <option value="last">Last commit only</option>
+            <option value="range">Select commit range…</option>
+          </select>
 
-    <!-- File list area -->
-    <div id="fileArea" style="display:none">
-      <div class="file-header">
-        <span id="fileCount"></span>
-        <div class="file-actions">
-          <button id="selectAllBtn">All</button>
-          <button id="deselectAllBtn">None</button>
+          <div id="rangePicker" style="display:none">
+            <div class="range-row">
+              <select id="fromCommit"></select>
+              <span class="range-arrow">→</span>
+              <select id="toCommit"></select>
+              <button id="loadCommitsBtn" class="icon-btn" title="Refresh commits">↻</button>
+            </div>
+          </div>
+
+          <button id="scanBtn" class="btn-block btn-primary">Scan for changes</button>
         </div>
-      </div>
-      <div id="fileList"></div>
-      <button id="generateBtn" class="primary big" style="margin-top:10px">Generate Zip</button>
+
+        <div id="fileArea" class="side-section side-files" style="display:none">
+          <div class="file-header">
+            <span id="fileCount"></span>
+            <div class="file-actions">
+              <button id="selectAllBtn">All</button>
+              <button id="deselectAllBtn">None</button>
+            </div>
+          </div>
+          <div id="fileList"></div>
+        </div>
+
+        <div id="sidebarEmpty" class="side-empty">
+          <p>No changes scanned yet.</p>
+          <p class="side-empty-sub">Load a repo and scan to see what's changed.</p>
+        </div>
+
+        <!-- Bottom action box, mirrors a commit box -->
+        <div id="zipBox">
+          <div class="field">
+            <label class="side-label">Output folder</label>
+            <div class="row">
+              <input id="outputDir" type="text" placeholder="C:\Users\you\updates" />
+              <button id="browseOutputBtn" class="icon-btn" title="Browse">…</button>
+            </div>
+          </div>
+          <button id="generateBtn" class="btn-block btn-commit">Generate Zip</button>
+        </div>
+      </aside>
+
+      <!-- Main diff pane -->
+      <main id="mainPane">
+        <div id="diffHeader" style="display:none">
+          <span id="diffFileStatus" class="file-status"></span>
+          <span id="diffFilePath"></span>
+        </div>
+        <div id="diffPane">
+          <div id="mainEmpty" class="main-empty">
+            <div class="main-empty-icon">⌗</div>
+            <p>Select a file to view its diff</p>
+            <p class="main-empty-sub">Scan a repo on the left to get started</p>
+          </div>
+        </div>
+        <div id="resultBanner" style="display:none"></div>
+      </main>
     </div>
 
-    <!-- Results -->
-    <div id="result" class="result"></div>
-
-    <!-- Log -->
-    <div id="logStrip"></div>
+    <!-- Footer log -->
+    <footer id="logStrip"></footer>
   </div>
 
   <script src="main.js"></script>

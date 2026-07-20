@@ -37,6 +37,20 @@ export namespace main {
 	        this.status = source["status"];
 	    }
 	}
+	export class RecentEntry {
+	    path: string;
+	    branch: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RecentEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.branch = source["branch"];
+	    }
+	}
 	export class SetRepoResult {
 	    branch: string;
 	    ok: boolean;

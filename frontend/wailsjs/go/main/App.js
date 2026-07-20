@@ -18,6 +18,10 @@ export function GetRecentCommits(arg1) {
   return window['go']['main']['App']['GetRecentCommits'](arg1);
 }
 
+export function GetRecentPaths() {
+  return window['go']['main']['App']['GetRecentPaths']();
+}
+
 export function GitAvailable() {
   return window['go']['main']['App']['GitAvailable']();
 }
@@ -28,6 +32,14 @@ export function OpenFolder(arg1) {
 
 export function PickFolder() {
   return window['go']['main']['App']['PickFolder']();
+}
+
+export function RemoveRecentPath(arg1) {
+  return window['go']['main']['App']['RemoveRecentPath'](arg1);
+}
+
+export function SaveRecentPath(arg1) {
+  return window['go']['main']['App']['SaveRecentPath'](arg1);
 }
 
 export function SetRepo(arg1) {

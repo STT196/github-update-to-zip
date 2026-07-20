@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -47,6 +49,7 @@ func (a *App) SetRepo(path string) SetRepoResult {
 	if err != nil {
 		return SetRepoResult{OK: false, Error: err.Error()}
 	}
+	a.SaveRecentPath(path) // auto-save on successful load
 	return SetRepoResult{Branch: branch, OK: true}
 }
 
@@ -170,4 +173,77 @@ func (a *App) PickFolder() (string, error) {
 	return wailsRuntime.OpenDirectoryDialog(a.ctx, wailsRuntime.OpenDialogOptions{
 		Title: "Select folder",
 	})
+}
+
+// ── Recent paths ────────────────────────────────────────────────────────
+
+type RecentEntry struct {
+	Path   string `json:"path"`
+	Branch string `json:"branch"`
+}
+
+func recentPath() string {
+	dir, _ := os.UserConfigDir()
+	p := filepath.Join(dir, "GitHubUpdateTracker")
+	os.MkdirAll(p, 0o755)
+	return filepath.Join(p, "recent.json")
+}
+
+func (a *App) SaveRecentPath(path string) error {
+	p := recentPath()
+	var entries []RecentEntry
+
+	data, _ := os.ReadFile(p)
+	json.Unmarshal(data, &entries) // ignore errors, start fresh on corrupt file
+
+	// Remove duplicate
+	filtered := entries[:0]
+	for _, e := range entries {
+		if !strings.EqualFold(e.Path, path) {
+			filtered = append(filtered, e)
+		}
+	}
+
+	entry := RecentEntry{Path: path}
+	if a.repo != nil && a.repo.Branch != "" {
+		entry.Branch = a.repo.Branch
+	}
+
+	// Prepend, cap at 10
+	entries = append([]RecentEntry{entry}, filtered...)
+	if len(entries) > 10 {
+		entries = entries[:10]
+	}
+
+	b, _ := json.MarshalIndent(entries, "", "  ")
+	return os.WriteFile(p, b, 0o644)
+}
+
+func (a *App) GetRecentPaths() []RecentEntry {
+	data, err := os.ReadFile(recentPath())
+	if err != nil {
+		return nil
+	}
+	var entries []RecentEntry
+	json.Unmarshal(data, &entries)
+	return entries
+}
+
+func (a *App) RemoveRecentPath(path string) error {
+	p := recentPath()
+	data, err := os.ReadFile(p)
+	if err != nil {
+		return nil
+	}
+	var entries []RecentEntry
+	json.Unmarshal(data, &entries)
+
+	filtered := entries[:0]
+	for _, e := range entries {
+		if !strings.EqualFold(e.Path, path) {
+			filtered = append(filtered, e)
+		}
+	}
+	b, _ := json.MarshalIndent(filtered, "", "  ")
+	return os.WriteFile(p, b, 0o644)
 }

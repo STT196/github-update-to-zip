@@ -11,10 +11,16 @@ export function GetFileDiff(arg1:string,arg2:string,arg3:string,arg4:string):Pro
 
 export function GetRecentCommits(arg1:number):Promise<Array<gitdiff.CommitInfo>>;
 
+export function GetRecentPaths():Promise<Array<main.RecentEntry>>;
+
 export function GitAvailable():Promise<boolean>;
 
 export function OpenFolder(arg1:string):Promise<void>;
 
 export function PickFolder():Promise<string>;
+
+export function RemoveRecentPath(arg1:string):Promise<void>;
+
+export function SaveRecentPath(arg1:string):Promise<void>;
 
 export function SetRepo(arg1:string):Promise<main.SetRepoResult>;
