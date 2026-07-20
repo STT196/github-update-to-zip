@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Git Update Zipper</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <h1>Git Update Zipper</h1>
+    <p class="subtitle">Select changed files, review diffs, zip for upload</p>
+
+    <!-- Repo path -->
+    <div class="field">
+      <label>Local repo path</label>
+      <div class="row">
+        <input id="repoPath" type="text" placeholder="C:\Users\you\my-project" />
+        <button id="setRepoBtn">Load</button>
+      </div>
+      <div id="repoStatus" class="hint"></div>
+    </div>
+
+    <!-- Output folder -->
+    <div class="field">
+      <label>Output folder</label>
+      <div class="row">
+        <input id="outputDir" type="text" placeholder="C:\Users\you\updates" />
+      </div>
+    </div>
+
+    <!-- Mode -->
+    <div class="field">
+      <label>What to include</label>
+      <div id="modeGroup" class="mode-group">
+        <label class="mode-option"><input type="radio" name="mode" value="uncommitted" checked /> Uncommitted changes</label>
+        <label class="mode-option"><input type="radio" name="mode" value="unpushed" /> Unpushed commits</label>
+        <label class="mode-option"><input type="radio" name="mode" value="last" /> Last commit only</label>
+        <label class="mode-option"><input type="radio" name="mode" value="range" /> Select commits</label>
+      </div>
+    </div>
+
+    <!-- Commit range picker -->
+    <div id="rangePicker" style="display:none">
+      <div class="field">
+        <div class="range-row">
+          <span>From:</span>
+          <select id="fromCommit"></select>
+          <span>→ To:</span>
+          <select id="toCommit"></select>
+          <button id="loadCommitsBtn">Refresh</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scan button -->
+    <button id="scanBtn" class="primary big">Scan changes</button>
+
+    <!-- File list area -->
+    <div id="fileArea" style="display:none">
+      <div class="file-header">
+        <span id="fileCount"></span>
+        <div class="file-actions">
+          <button id="selectAllBtn">All</button>
+          <button id="deselectAllBtn">None</button>
+        </div>
+      </div>
+      <div id="fileList"></div>
+      <button id="generateBtn" class="primary big" style="margin-top:10px">Generate Zip</button>
+    </div>
+
+    <!-- Results -->
+    <div id="result" class="result"></div>
+
+    <!-- Log -->
+    <div id="logStrip"></div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>

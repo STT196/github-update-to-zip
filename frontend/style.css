@@ -1,0 +1,246 @@
+* { box-sizing: border-box; font-family: -apple-system, "Segoe UI", Arial, sans-serif; }
+body { margin: 0; background: #f4f3ef; color: #222; }
+
+#app {
+  max-width: 680px;
+  margin: 1.5rem auto;
+  padding: 1.5rem 2rem;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e2e0d8;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+h1 { margin: 0; font-size: 1.2rem; }
+.subtitle { margin: 0; font-size: 0.8rem; color: #999; }
+
+/* ── Fields ──────────────────────────────────────────────────────────── */
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 12px; color: #666; font-weight: 500; }
+
+.row { display: flex; gap: 6px; }
+.row input { flex: 1; }
+
+.hint { font-size: 11px; margin-top: 2px; }
+.hint.ok { color: #3b9c3b; }
+.hint.err { color: #c0392b; }
+
+/* ── Mode selector ───────────────────────────────────────────────────── */
+
+.mode-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.mode-option {
+  font-size: 13px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.range-row select { flex: 1; }
+
+/* ── Buttons & inputs ────────────────────────────────────────────────── */
+
+button {
+  border: 1px solid #d5d3c9;
+  background: #fff;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:hover { background: #f4f3ef; }
+button:disabled { opacity: 0.5; cursor: default; }
+
+button.primary {
+  background: #2b6cb0;
+  color: #fff;
+  border-color: #2b6cb0;
+}
+button.primary:hover { background: #1a5a9a; }
+
+button.big {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+input, select {
+  border: 1px solid #d5d3c9;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  width: 100%;
+}
+select { background: #fff; cursor: pointer; }
+
+/* ── File list ───────────────────────────────────────────────────────── */
+
+.file-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.file-actions { display: flex; gap: 4px; }
+.file-actions button { font-size: 11px; padding: 2px 8px; }
+
+#fileList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e0d8;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.file-row {
+  border-bottom: 1px solid #f0efe9;
+}
+.file-row:last-child { border-bottom: none; }
+
+.file-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.file-main:hover { background: #f8f7f4; }
+
+.file-check { width: auto !important; flex-shrink: 0; }
+
+.file-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.status-added    { background: #d4edda; color: #155724; }
+.status-modified { background: #fff3cd; color: #856404; }
+.status-deleted  { background: #f8d7da; color: #721c24; }
+.status-renamed  { background: #cce5ff; color: #004085; }
+
+.file-path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.file-expand {
+  color: #999;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* ── Diff viewer ─────────────────────────────────────────────────────── */
+
+.file-diff {
+  border-top: 1px solid #e2e0d8;
+  background: #fafafa;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.diff-loading, .diff-empty, .diff-err {
+  padding: 12px;
+  font-size: 12px;
+  color: #999;
+}
+.diff-err { color: #c0392b; }
+
+.diff-view {
+  font-family: "Cascadia Code", "Consolas", "Fira Code", monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.diff-line {
+  padding: 0 10px;
+  white-space: pre;
+  min-height: 1.3em;
+}
+.diff-add  { background: #e6ffec; color: #1a7f37; }
+.diff-del  { background: #ffebe9; color: #cf222e; }
+.diff-hunk { background: #ddf4ff; color: #0550ae; font-weight: 500; }
+.diff-meta { color: #656d76; font-weight: 500; }
+
+/* ── Result ──────────────────────────────────────────────────────────── */
+
+.result { font-size: 13px; }
+
+.result-ok {
+  background: #f0faf0;
+  border: 1px solid #c8e6c8;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.result-name {
+  font-family: monospace;
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.result-files {
+  font-size: 11px;
+  color: #888;
+  margin-top: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.result-empty { color: #999; font-style: italic; padding: 8px 0; }
+
+.result-err {
+  color: #c0392b;
+  background: #fef0f0;
+  border: 1px solid #f0c8c8;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.open-btn { margin-top: 8px; font-size: 12px; }
+
+/* ── Log ─────────────────────────────────────────────────────────────── */
+
+#logStrip {
+  margin-top: 0.25rem;
+  border-top: 1px solid #e2e0d8;
+  padding-top: 6px;
+  font-size: 11px;
+  color: #666;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+.log-line {
+  padding: 2px 0;
+  border-bottom: 1px solid #f4f3ef;
+}
