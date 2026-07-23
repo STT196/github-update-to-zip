@@ -271,11 +271,20 @@ function renderFileList() {
     const row = document.createElement("div");
     row.className = "file-row";
     row.dataset.idx = i;
+    row.title = f.path; // hover tooltip for full path
+
+    // Extract filename for display
+    const parts = f.path.split(/[\\/]/);
+    const fileName = parts[parts.length - 1];
+    const dirPath = parts.length > 1 ? parts.slice(0, -1).join("/") : "";
 
     row.innerHTML = `
       <input type="checkbox" class="file-check" data-idx="${i}" checked />
       <span class="file-status status-${f.status}">${f.status}</span>
-      <span class="file-path">${esc(f.path)}</span>`;
+      <span class="file-path">
+        <span class="file-name">${esc(fileName)}</span>
+        ${dirPath ? `<span class="file-dir">${esc(dirPath)}</span>` : ""}
+      </span>`;
 
     row.onclick = (e) => {
       if (e.target.tagName === "INPUT") return;
@@ -461,6 +470,51 @@ el("themeToggle").onclick = () => {
   const current = document.documentElement.getAttribute("data-theme");
   applyTheme(current === "dark" ? "light" : "dark");
 };
+
+// ── Resizable changes panel ─────────────────────────────────────────────
+
+(function initResizeHandle() {
+  const handle = el("resizeHandle");
+  const panel = el("changesPanel");
+  if (!handle || !panel) return;
+
+  let dragging = false;
+  let startX = 0;
+  let startWidth = 0;
+  const MIN_WIDTH = 220;
+  const MAX_WIDTH = 600;
+
+  handle.addEventListener("mousedown", (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startWidth = panel.offsetWidth;
+    handle.classList.add("active");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const delta = e.clientX - startX;
+    const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
+    panel.style.width = newWidth + "px";
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove("active");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    // Persist width
+    try { localStorage.setItem("changesPanelWidth", panel.style.width); } catch (_) {}
+  });
+
+  // Restore saved width
+  const saved = localStorage.getItem("changesPanelWidth");
+  if (saved) panel.style.width = saved;
+})();
 
 // ── Init ────────────────────────────────────────────────────────────────
 

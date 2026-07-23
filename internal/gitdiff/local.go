@@ -87,7 +87,9 @@ func (r *LocalRepo) RecentCommits(n int) ([]CommitInfo, error) {
 func (r *LocalRepo) ChangedFiles(mode DiffMode, from, to string) ([]zipper.ChangedFile, error) {
 	switch mode {
 	case ModeUncommitted:
-		return r.diffNameStatus("HEAD", "") // working tree vs HEAD
+		// Use git status --porcelain to include untracked files,
+		// not just tracked changes (git diff --name-status misses untracked).
+		return r.diffPorcelainStatus()
 	case ModeUnpushed:
 		remote := "origin/" + r.Branch
 		return r.diffNameStatus(remote, "HEAD")
@@ -121,13 +123,18 @@ func (r *LocalRepo) diffNameStatus(from, to string) ([]zipper.ChangedFile, error
 		if line == "" {
 			continue
 		}
-		parts := strings.Fields(line)
-		if len(parts) < 2 {
+
+		// git diff --name-status uses TAB as field delimiter.
+		// Format: <status>\t<path>  or  <status>\t<old>\t<new> (rename)
+		fields := strings.Split(line, "\t")
+		if len(fields) < 2 {
 			continue
 		}
-		status := statusFromCode(parts[0])
-		// The path is the last field (handles rename lines like "R100 old new")
-		relPath := filepath.ToSlash(parts[len(parts)-1])
+
+		status := statusFromCode(fields[0])
+		// The last field is always the path (for renames: new path)
+		relPath := unquoteGitPath(fields[len(fields)-1])
+		relPath = filepath.ToSlash(relPath)
 
 		files = append(files, zipper.ChangedFile{
 			Path:          relPath,
@@ -136,6 +143,124 @@ func (r *LocalRepo) diffNameStatus(from, to string) ([]zipper.ChangedFile, error
 		})
 	}
 	return files, nil
+}
+
+// diffPorcelainStatus runs "git status --porcelain" and returns all
+// staged, unstaged, and untracked files. Unlike git diff --name-status,
+// this includes untracked (??) files which git diff does not report.
+func (r *LocalRepo) diffPorcelainStatus() ([]zipper.ChangedFile, error) {
+	out, err := r.output("status", "--porcelain")
+	if err != nil {
+		return nil, err
+	}
+
+	var files []zipper.ChangedFile
+	sc := bufio.NewScanner(bytes.NewBufferString(out))
+	for sc.Scan() {
+		line := sc.Text()
+		// porcelain format: "XY filename" (2 status chars + space + path)
+		// For renamed: "R  old -> new" (score is in the status field)
+		if len(line) < 4 {
+			continue
+		}
+
+		statusField := strings.TrimSpace(line[:2])
+		rest := strings.TrimSpace(line[3:])
+
+		// Extract path (handle rename "old -> new")
+		relPath := rest
+		if idx := strings.Index(rest, " -> "); idx >= 0 {
+			relPath = rest[idx+4:] // take the "new" path
+		}
+
+		// Unquote paths that git wrapped in double-quotes (files with spaces, etc.)
+		relPath = unquoteGitPath(relPath)
+
+		// Skip empty paths
+		if relPath == "" {
+			continue
+		}
+
+		status := porcelainStatus(statusField)
+		files = append(files, zipper.ChangedFile{
+			Path:          filepath.ToSlash(relPath),
+			Status:        status,
+			SourceAbsPath: filepath.Join(r.Path, filepath.FromSlash(relPath)),
+		})
+	}
+	return files, nil
+}
+
+// unquoteGitPath handles git's C-style quoted paths.
+// Git wraps paths in double quotes and uses backslash escapes
+// when they contain special characters like spaces, tabs, etc.
+// e.g. "file with spaces.txt" → file with spaces.txt
+//      "file\\with\\backslashes.txt" → file\with\backslashes.txt
+func unquoteGitPath(s string) string {
+	if len(s) < 2 || s[0] != '"' {
+		return s // not quoted
+	}
+
+	// Remove surrounding quotes and unescape
+	s = s[1 : len(s)-1] // strip leading/trailing "
+
+	var buf strings.Builder
+	buf.Grow(len(s))
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' && i+1 < len(s) {
+			// Handle C-style escape sequences
+			switch s[i+1] {
+			case 'n':
+				buf.WriteByte('\n')
+			case 't':
+				buf.WriteByte('\t')
+			case '\\':
+				buf.WriteByte('\\')
+			case '"':
+				buf.WriteByte('"')
+			default:
+				// For octal escapes like \123, git uses them for non-printable chars
+				// but for most practical cases, just keep the literal
+				buf.WriteByte(s[i])
+				buf.WriteByte(s[i+1])
+			}
+			i++
+		} else {
+			buf.WriteByte(s[i])
+		}
+	}
+	return buf.String()
+}
+
+// porcelainStatus converts a git status --porcelain code to a human-readable status.
+func porcelainStatus(xy string) string {
+	// Index vs worktree: X=index(staging), Y=worktree
+	// ?? = untracked, !! = ignored
+	x := byte(' ')
+	y := byte(' ')
+	if len(xy) >= 1 {
+		x = xy[0]
+	}
+	if len(xy) >= 2 {
+		y = xy[1]
+	}
+
+	switch {
+	case x == '?' && y == '?':
+		return "added" // treat untracked as added
+	case x == 'A' || y == 'A':
+		return "added"
+	case x == 'D' || y == 'D':
+		return "deleted"
+	case x == 'R' || y == 'R':
+		return "renamed"
+	case x == 'C' || y == 'C':
+		return "added" // copied → treat as added
+	case x == 'M' || y == 'M':
+		return "modified"
+	default:
+		return "modified"
+	}
 }
 
 func statusFromCode(code string) string {
@@ -159,6 +284,11 @@ func (r *LocalRepo) FileDiff(mode DiffMode, from, to, filePath string) (string, 
 	var fromRef, toRef string
 	switch mode {
 	case ModeUncommitted:
+		// For uncommitted mode, check if the file is untracked.
+		// If untracked, show the entire file as added lines.
+		if r.isUntracked(filePath) {
+			return r.untrackedFileDiff(filePath)
+		}
 		fromRef = "HEAD"
 		toRef = ""
 	case ModeUnpushed:
@@ -178,6 +308,44 @@ func (r *LocalRepo) FileDiff(mode DiffMode, from, to, filePath string) (string, 
 	}
 	args = append(args, "--", filePath)
 	return r.output(args...)
+}
+
+// isUntracked returns true if the file is not tracked by git.
+func (r *LocalRepo) isUntracked(filePath string) bool {
+	err := r.run("ls-files", "--error-unmatch", "--", filePath)
+	return err != nil
+}
+
+// untrackedFileDiff reads the file and returns a synthetic diff
+// showing all lines as added (like git diff --no-index /dev/null <file>).
+func (r *LocalRepo) untrackedFileDiff(filePath string) (string, error) {
+	absPath := filepath.Join(r.Path, filepath.FromSlash(filePath))
+	data, err := os.ReadFile(absPath)
+	if err != nil {
+		return "", fmt.Errorf("cannot read untracked file %s: %w", filePath, err)
+	}
+
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("diff --git a/%s b/%s\n", filePath, filePath))
+	buf.WriteString("new file mode 100644\n")
+	buf.WriteString(fmt.Sprintf("--- /dev/null\n+++ b/%s\n", filePath))
+	buf.WriteString("@@ -0,0 +1," + fmt.Sprintf("%d", countLines(data)) + " @@\n")
+
+	sc := bufio.NewScanner(bytes.NewReader(data))
+	for sc.Scan() {
+		buf.WriteString("+" + sc.Text() + "\n")
+	}
+	return buf.String(), nil
+}
+
+func countLines(data []byte) int {
+	n := 0
+	for _, b := range data {
+		if b == '\n' {
+			n++
+		}
+	}
+	return n
 }
 
 func (r *LocalRepo) run(args ...string) error {
