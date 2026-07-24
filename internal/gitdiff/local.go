@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/thisara/github-update-tracker/internal/zipper"
@@ -351,7 +350,7 @@ func countLines(data []byte) int {
 func (r *LocalRepo) run(args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = r.Path
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	hideWindow(cmd)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	err := cmd.Run()
@@ -364,7 +363,7 @@ func (r *LocalRepo) run(args ...string) error {
 func (r *LocalRepo) output(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = r.Path
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	hideWindow(cmd)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
