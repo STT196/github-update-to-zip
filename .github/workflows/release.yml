@@ -11,6 +11,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
@@ -37,7 +38,7 @@ jobs:
 
       - name: Install Linux deps
         if: runner.os == 'Linux'
-        run: sudo apt update && sudo apt install -y build-essential libgtk-3-dev libwebkit2gtk-4.0-dev
+        run: sudo apt update && sudo apt install -y build-essential libgtk-3-dev libwebkit2gtk-4.1-dev
 
       - name: Build
         timeout-minutes: 15
