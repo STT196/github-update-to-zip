@@ -24,7 +24,7 @@ jobs:
             tags: webkit2_41
           - os: macos-latest
             platform: darwin/universal
-            binary: build/bin/github-update-tracker.app
+            binary: build/bin/github-update-tracker.app.zip
             tags: ""
     runs-on: ${{ matrix.os }}
     steps:
@@ -53,6 +53,10 @@ jobs:
         timeout-minutes: 15
         run: wails build -platform ${{ matrix.platform }} -tags ${{ matrix.tags }}
 
+      - name: Zip macOS app
+        if: runner.os == 'macOS'
+        run: cd build/bin && zip -r github-update-tracker.app.zip github-update-tracker.app
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -74,6 +78,22 @@ jobs:
           files: |
             github-update-tracker.exe
             github-update-tracker
-            github-update-tracker.app
-          generate_release_notes: true
-          fail_on_unmatched_files: false
+            github-update-tracker.app.zip
+          body: |
+            Simple desktop tool to zip changed files from a git repo for deployment.
+
+            ### What it does
+            - Point it at any local git repo
+            - Choose what to zip: uncommitted changes, unpushed commits, last commit, or a range of commits
+            - Produces a timestamped zip with full file paths preserved
+
+            ### Downloads
+            | Platform | File |
+            |----------|------|
+            | Windows  | `github-update-tracker.exe` |
+            | Linux    | `github-update-tracker` |
+            | macOS    | `github-update-tracker.app` |
+
+            ### Requirements
+            - `git` on PATH
+            - Windows: WebView2 runtime (included in Windows 10+)
