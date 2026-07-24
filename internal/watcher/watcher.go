@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/thisara/github-update-tracker/internal/config"
@@ -24,13 +26,19 @@ type UpdateResult struct {
 
 // Watcher polls one repo on an interval and produces update zips.
 type Watcher struct {
-	ctx    context.Context
-	repo   config.RepoConfig
-	cancel chan struct{}
+	ctx      context.Context
+	repo     config.RepoConfig
+	cancel   chan struct{}
+	cloneDir string
 }
 
 func NewWatcher(ctx context.Context, repo config.RepoConfig) *Watcher {
-	return &Watcher{ctx: ctx, repo: repo, cancel: make(chan struct{})}
+	return &Watcher{
+		ctx:      ctx,
+		repo:     repo,
+		cancel:   make(chan struct{}),
+		cloneDir: filepath.Join(os.TempDir(), "gh-update-tracker", repo.ID),
+	}
 }
 
 func (w *Watcher) Run() {
@@ -55,75 +63,83 @@ func (w *Watcher) Stop() {
 	close(w.cancel)
 }
 
+// ensureClone clones the repo if not already present, or pulls latest changes.
+func (w *Watcher) ensureClone() error {
+	if _, err := os.Stat(filepath.Join(w.cloneDir, ".git")); os.IsNotExist(err) {
+		// Clone fresh
+		cloneURL := fmt.Sprintf("https://%s@github.com/%s/%s.git", w.repo.GitHubToken, w.repo.Owner, w.repo.Repo)
+		if w.repo.GitHubToken == "" {
+			cloneURL = fmt.Sprintf("https://github.com/%s/%s.git", w.repo.Owner, w.repo.Repo)
+		}
+		cmd := exec.Command("git", "clone", "--branch", w.repo.Branch, cloneURL, w.cloneDir)
+		cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("clone failed: %w\n%s", err, string(out))
+		}
+		return nil
+	}
+	// Pull latest
+	cmd := exec.Command("git", "-C", w.cloneDir, "fetch", "origin", w.repo.Branch)
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("fetch failed: %w\n%s", err, string(out))
+	}
+	cmd = exec.Command("git", "-C", w.cloneDir, "reset", "--hard", "origin/"+w.repo.Branch)
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("reset failed: %w\n%s", err, string(out))
+	}
+	return nil
+}
+
+// latestSHA returns the current HEAD SHA of the cloned repo.
+func (w *Watcher) latestSHA() (string, error) {
+	cmd := exec.Command("git", "-C", w.cloneDir, "rev-parse", "HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 // CheckOnce runs a single detect -> diff -> zip cycle.
-// This is the core loop described in the design: detect new SHA,
-// diff old vs new, zip the changed files with their paths.
 func (w *Watcher) CheckOnce() (UpdateResult, error) {
-	useGit := w.repo.Mode == "git" && gitdiff.GitAvailable()
+	if !gitdiff.GitAvailable() {
+		return UpdateResult{}, fmt.Errorf("git not available on PATH")
+	}
 
 	st, err := state.Load(w.repo.ID)
 	if err != nil {
 		return UpdateResult{}, err
 	}
 
-	var newSHA string
-	var changedFiles []zipper.ChangedFile
+	if err := w.ensureClone(); err != nil {
+		return UpdateResult{}, err
+	}
 
-	if useGit {
-		g := &gitdiff.LocalGit{
-			Owner:    w.repo.Owner,
-			Repo:     w.repo.Repo,
-			Branch:   w.repo.Branch,
-			CloneDir: filepath.Join(os.TempDir(), "gh-update-tracker", w.repo.ID),
-			Token:    w.repo.GitHubToken,
-		}
-		if err := g.EnsureClone(); err != nil {
-			return UpdateResult{}, err
-		}
-		newSHA, err = g.LatestRemoteSHA()
-		if err != nil {
-			return UpdateResult{}, err
-		}
-		if newSHA == st.LastSHA {
-			return UpdateResult{Changed: false}, nil
-		}
-		if st.LastSHA == "" {
-			// first run: nothing to diff against yet, just record HEAD
-			st.LastSHA = newSHA
-			_ = state.Save(w.repo.ID, st)
-			return UpdateResult{Changed: false}, nil
-		}
-		changedFiles, err = g.DiffFiles(st.LastSHA, newSHA)
-		if err != nil {
-			return UpdateResult{}, err
-		}
-		if err := g.CheckoutNew(newSHA); err != nil {
-			return UpdateResult{}, err
-		}
-	} else {
-		a := &gitdiff.GitHubAPI{
-			Owner:   w.repo.Owner,
-			Repo:    w.repo.Repo,
-			Branch:  w.repo.Branch,
-			Token:   w.repo.GitHubToken,
-			TempDir: filepath.Join(os.TempDir(), "gh-update-tracker-api", w.repo.ID),
-		}
-		newSHA, err = a.LatestRemoteSHA()
-		if err != nil {
-			return UpdateResult{}, err
-		}
-		if newSHA == st.LastSHA {
-			return UpdateResult{Changed: false}, nil
-		}
-		if st.LastSHA == "" {
-			st.LastSHA = newSHA
-			_ = state.Save(w.repo.ID, st)
-			return UpdateResult{Changed: false}, nil
-		}
-		changedFiles, err = a.DiffFiles(newSHA)
-		if err != nil {
-			return UpdateResult{}, err
-		}
+	newSHA, err := w.latestSHA()
+	if err != nil {
+		return UpdateResult{}, err
+	}
+
+	if newSHA == st.LastSHA {
+		return UpdateResult{Changed: false}, nil
+	}
+	if st.LastSHA == "" {
+		// first run: nothing to diff against yet, just record HEAD
+		st.LastSHA = newSHA
+		_ = state.Save(w.repo.ID, st)
+		return UpdateResult{Changed: false}, nil
+	}
+
+	// Diff using LocalRepo on the cloned directory
+	lr := &gitdiff.LocalRepo{Path: w.cloneDir}
+	changedFiles, err := lr.ChangedFiles(gitdiff.ModeRange, st.LastSHA, newSHA)
+	if err != nil {
+		return UpdateResult{}, err
 	}
 
 	if len(changedFiles) == 0 {
@@ -142,7 +158,7 @@ func (w *Watcher) CheckOnce() (UpdateResult, error) {
 	zipName := fmt.Sprintf("update_%s_%s.zip", time.Now().Format("20060102_150405"), shortSHA)
 	zipPath := filepath.Join(w.repo.OutputDir, zipName)
 
-	if err := zipper.BuildZip(changedFiles, zipPath); err != nil {
+	if err := zipper.BuildZip(changedFiles, zipPath, ""); err != nil {
 		return UpdateResult{}, err
 	}
 
@@ -157,9 +173,10 @@ func (w *Watcher) CheckOnce() (UpdateResult, error) {
 		Files: fileNames,
 		Time:  time.Now().Format(time.RFC3339),
 	})
+	st.LastSHA = newSHA
+	_ = state.Save(w.repo.ID, st)
 
-	notify.Send("New update: "+w.repo.Owner+"/"+w.repo.Repo,
-		fmt.Sprintf("%d files changed -> %s", len(fileNames), zipName))
+	notify.Send("GitHub Update Tracker", fmt.Sprintf("%s/%s: %d files changed\n%s", w.repo.Owner, w.repo.Repo, len(fileNames), shortSHA))
 
 	return UpdateResult{Changed: true, SHA: shortSHA, ZipPath: zipPath, Files: fileNames}, nil
 }
