@@ -1,3 +1,4 @@
 /.vscode
 /agent.md
 build/**
+!build/appicon.png
